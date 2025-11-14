@@ -1,0 +1,18 @@
+[project]
+name = "curlypython"
+version = "0.1.0"
+license = {text = "GPL-3.0-only"}
+authors = [
+    {name = "CaptainSuo", email = "captainsuo@outlook.com"},
+]
+description = "一个能够让你使用大括号写Python代码的Python库\nA Python library which allows you to write Python code with curly braces"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+
+[project.scripts]
+curpy = "curlypython.cli:main"
+curlypy = "curlypython.cli:main"
+
+[tool.setuptools]
+packages = { find = {} }
