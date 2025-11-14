@@ -3,6 +3,12 @@ import sys
 from .parser import CurlyParser
 
 
+def run_curly_code(code):
+    # 创建新的全局命名空间
+    global_namespace = {"__name__": "__main__", "__file__": None}
+    exec(code, global_namespace)
+
+
 def main():
     parser = argparse.ArgumentParser(description="CurlyPython - 用大括号写Python")
     parser.add_argument("input", help="输入文件 (.curpy)")
@@ -26,7 +32,7 @@ def main():
     # 输出或运行
     if not args.output:
         try:
-            exec(python_code)
+            run_curly_code(python_code)
         except SyntaxError as e:
             print("Curpy Error: invalid or unsupported syntax")
             raise e
