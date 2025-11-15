@@ -1,98 +1,101 @@
 import re
+from typing import Self
 
 
 class CurlyParser:
 
-    def mark_comment_ends(self, code):
-        """在每行注释结束位置做标记"""
-        lines = code.split("\n")
+    def __init__(self) -> None:
+        self.comments: list[str] = []
+        self.strings: list[str] = []
+        self.code: str = ""
+
+    def mark_comments(self) -> Self:
+        """提取注释并用索引标记替换"""
+        lines = self.code.split("\n")
         marked_lines = []
 
         for line in lines:
             if "#" in line:
-                # 在注释开始位置插入特殊标记
-                parts = line.split("#", 1)
-                marked_line = parts[0] + "#" + parts[1] + "¶"  # 标记注释结束
+                # 分割代码和注释
+                code_part, comment_part = line.split("#", 1)
+                comment_content = comment_part.rstrip()
+
+                # 保存注释内容
+                self.comments.append(comment_content)
+
+                # 用索引标记替换整个注释
+                comment_index = len(self.comments) - 1
+                marked_line = f"{code_part.rstrip()} #__COMMENT_{comment_index}__;"
                 marked_lines.append(marked_line)
             else:
                 marked_lines.append(line)
 
-        return "\n".join(marked_lines)
+        self.code = "\n".join(marked_lines)
+        return self
 
-    def restore_comment_ends(self, code):
-        """将注释结束标记替换为换行+当前缩进"""
-        lines = code.split("\n")
-        restored_lines = []
+    def restore_comments(self) -> Self:
+        """恢复注释内容"""
+        import re
 
-        for line in lines:
-            if "¶" in line:
-                # 计算当前行的缩进
-                indent_match = re.match(r"^(\s*)", line)
-                indent = indent_match.group(1) if indent_match else ""
-                # 替换标记为换行+相同缩进
-                line = indent + line.strip().replace("¶", "\n" + indent[:-1])
-            restored_lines.append(line)
+        def replace_comment(match):
+            index = int(match.group(1))
+            if index < len(self.comments):
+                return f"#{self.comments[index]}"
+            return match.group(0)
 
-        return "\n".join(restored_lines)
+        # 替换所有注释标记
+        self.code = re.sub(r"#__COMMENT_(\d+)__", replace_comment, self.code)
+        return self
 
-    def preprocess_code(self, code) -> str:
+    def mark_strings(self) -> Self:
+        """提取字符串并用索引标记替换"""
+        import re
+
+        # 存储字符串内容
+        self.strings = []
+
+        # 处理双引号字符串
+        double_pattern = r'"(?:\\.|[^"\\])*"'
+        double_matches = list(re.finditer(double_pattern, self.code))
+        for i, match in enumerate(reversed(double_matches)):
+            string_content = match.group(0)
+            self.strings.append(string_content)
+            placeholder = f"__$STRING_{len(self.strings)-1}__"
+            start, end = match.span()
+            self.code = self.code[:start] + placeholder + self.code[end:]
+
+        # 处理单引号字符串
+        single_pattern = r"'(?:\\.|[^'\\])*'"
+        single_matches = list(re.finditer(single_pattern, self.code))
+        for i, match in enumerate(reversed(single_matches)):
+            string_content = match.group(0)
+            self.strings.append(string_content)
+            placeholder = f"__$STRING_{len(self.strings)-1}__"
+            start, end = match.span()
+            self.code = self.code[:start] + placeholder + self.code[end:]
+
+        return self
+
+    def restore_strings(self) -> Self:
+        """恢复字符串内容"""
+        import re
+
+        def replace_string(match):
+            index = int(match.group(1))
+            if index < len(self.strings):
+                return self.strings[index]
+            return match.group(0)
+
+        # 替换所有字符串标记
+        self.code = re.sub(r"__\$STRING_(\d+)__", replace_string, self.code)
+        return self
+
+    def preprocess_code(self) -> Self:
         """将所有连续空白（空格、tab、换行）替换为单个空格"""
-        code = self.mark_comment_ends(code)
-        code = re.sub(r"\s+", " ", code)
-        return code.strip()
+        self.code = re.sub(r"\s+", " ", self.code).strip()
+        return self
 
-    def final_syntax_cleanup(self, code):
-        lines = code.split("\n")
-        new_lines = []
-
-        for line in lines:
-            # 计算当前行的缩进
-            indent_match = re.match(r"^(\s*)", line)
-            indent = indent_match.group(1) if indent_match else ""
-
-            stripped = line.strip()
-
-            pattern = r"^\s*(.+)\s+(def|class)\s+(\w+)(?:\s*\([^)]*\)\s*:)?\s*:?"
-            match = re.match(pattern, stripped)
-
-            if match:
-                modifiers, keyword, name = match.groups()
-
-                # 构建装饰器和处理导入
-                mod_list = modifiers.strip().split()
-                decorators = [f"{indent}@{mod.strip()}" for mod in mod_list]
-
-                # 重构定义行
-                new_def = re.sub(
-                    rf"^\s*.+\s+{keyword}", f"{indent}{keyword}", stripped
-                )
-
-                new_lines.extend(decorators)
-                new_lines.append(new_def)
-            else:
-                new_lines.append(line)
-
-        return "\n".join(new_lines)
-
-    def replace_double_colon(self, text) -> str:
-        # 使用单词边界\b来确保变量名的边界
-        pattern = r"\b([a-zA-Z_][a-zA-Z0-9_]*)::([a-zA-Z_][a-zA-Z0-9_]*)\b"
-
-        def replacer(match) -> str:
-            return f"{match.group(1)}.{match.group(2)}"
-
-        # 需要多次应用来处理多重作用域
-        old_text = ""
-        while old_text != text:
-            old_text = text
-            text = re.sub(pattern, replacer, text)
-
-        return text
-
-    def convert(self, code):
-        # 预处理
-        code = self.preprocess_code(code)
-
+    def handle_indent(self) -> Self:
         # 缩进匹配大括号
         no_more_spaces: bool = False
         in_string = False
@@ -101,10 +104,10 @@ class CurlyParser:
         output = []
         indent_level = 0
         i = 0
-        length = len(code)
+        length = len(self.code)
 
         while i < length:
-            char = code[i]
+            char = self.code[i]
 
             # 处理字符串状态
             if in_string:
@@ -112,7 +115,7 @@ class CurlyParser:
                 # 检查字符串结束（匹配相同的引号）
                 if char == string_char:
                     # 检查转义字符，如果是转义的引号则不结束字符串
-                    if i > 0 and code[i - 1] == "\\":
+                    if i > 0 and self.code[i - 1] == "\\":
                         pass  # 转义引号，继续字符串
                     else:
                         in_string = False
@@ -132,7 +135,7 @@ class CurlyParser:
             # 检查字符串开始（非转义的引号）
             if char in ['"', "'"]:
                 # 检查是否是转义的引号
-                if i > 0 and code[i - 1] == "\\":
+                if i > 0 and self.code[i - 1] == "\\":
                     output.append(char)
                 else:
                     in_string = True
@@ -165,24 +168,69 @@ class CurlyParser:
                 output.append(char)
                 no_more_spaces = False
 
-            if output[-7:] == list("else if"):
-                for _ in range(7):
-                    output.pop()
-                output.append("elif")
-            elif output[-2:] == ["+", "+"]:
-                output.pop()
-                output.pop()
-                output.append("+= 1")
-
-            elif output[-2:] == ["-", "-"]:
-                output.pop()
-                output.pop()
-                output.append("-= 1")
-
             i += 1
 
-        code = "".join(output).strip()
-        code = self.final_syntax_cleanup(code)
-        code = self.restore_comment_ends(code)
+        self.code = "".join(output).strip()
+        return self
 
+    def replace_basic_syntax(self) -> Self:
+
+        self.code = re.sub(r"\belse\s+if\b", "elif", self.code)
+        self.code = re.sub(r"(\w+)\+\+", r"(\1 := \1 + 1) - 1", self.code)
+        self.code = re.sub(r"\+\+(\w+)", r"(\1 := \1 + 1)", self.code)
+        self.code = re.sub(r"(\w+)\-\-", r"(\1 := \1 - 1) + 1", self.code)
+        self.code = re.sub(r"\-\-(\w+)", r"(\1 := \1 - 1)", self.code)
+
+        return self
+
+    def parse_decorator(self) -> Self:
+
+        lines = self.code.split("\n")
+        new_lines = []
+
+        for line in lines:
+            # 计算当前行的缩进
+            indent_match = re.match(r"^(\s*)", line)
+            indent = indent_match.group(1) if indent_match else ""
+
+            stripped = line.strip()
+
+            pattern = r"^\s*(.+)\s+(def|class)\s+(\w+)(?:\s*\([^)]*\)\s*:)?\s*:?"
+            match = re.match(pattern, stripped)
+
+            if match:
+                modifiers, keyword, name = match.groups()
+
+                # 构建装饰器和处理导入
+                mod_list = modifiers.strip().split()
+                decorators = [f"{indent}@{mod.strip()}" for mod in mod_list]
+
+                # 重构定义行
+                new_def = re.sub(
+                    rf"^\s*.+\s+{keyword}", f"{indent}{keyword}", stripped
+                )
+
+                new_lines.extend(decorators)
+                new_lines.append(new_def)
+            else:
+                new_lines.append(line)
+
+        self.code = "\n".join(new_lines)
+
+        return self
+
+    def convert(self, code) -> str:
+        self.code = code
+        (
+            self.mark_comments()
+            .mark_strings()
+            .preprocess_code()
+            .handle_indent()
+            .replace_basic_syntax()
+            .parse_decorator()
+            .restore_strings()
+            .restore_comments()
+        )
+        code = self.code
+        self.code = ""
         return code
