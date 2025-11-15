@@ -98,64 +98,53 @@ class CurlyParser:
     def handle_indent(self) -> Self:
         # 缩进匹配大括号
         no_more_spaces: bool = False
-        in_string = False
-        string_char = None  # 记录字符串引号类型 ' 或 "
-        in_comment = False
+        expect_indent: bool = False
+        dict_scope_level: int = 0
         output = []
         indent_level = 0
         i = 0
         length = len(self.code)
 
+        control_keywords = {
+            "if",
+            "else",
+            "elif",
+            "for",
+            "while",
+            "def",
+            "class",
+            "try",
+            "except",
+            "finally",
+            "with",
+        }
+
         while i < length:
             char = self.code[i]
 
-            # 处理字符串状态
-            if in_string:
-                output.append(char)
-                # 检查字符串结束（匹配相同的引号）
-                if char == string_char:
-                    # 检查转义字符，如果是转义的引号则不结束字符串
-                    if i > 0 and self.code[i - 1] == "\\":
-                        pass  # 转义引号，继续字符串
-                    else:
-                        in_string = False
-                        string_char = None
-                i += 1
-                continue
-
-            # 处理注释状态
-            if in_comment:
-                output.append(char)
-                # 注释在换行时结束
-                if char == "\n":
-                    in_comment = False
-                i += 1
-                continue
-
-            # 检查字符串开始（非转义的引号）
-            if char in ['"', "'"]:
-                # 检查是否是转义的引号
-                if i > 0 and self.code[i - 1] == "\\":
-                    output.append(char)
-                else:
-                    in_string = True
-                    string_char = char
-                    output.append(char)
-                i += 1
-                continue
+            if i > 0 and "".join(output[-7:]).split()[-1] in control_keywords:
+                expect_indent = True
 
             # 大括号处理
             if char == "{":
-                output.append(":")
-                indent_level += 1
-                output.append("\n" + " " * (indent_level * 4))
-                no_more_spaces = True
+                if expect_indent:
+                    output.append(":")
+                    indent_level += 1
+                    output.append("\n" + " " * (indent_level * 4))
+                    expect_indent = False
+                    no_more_spaces = True
+                else:
+                    dict_scope_level += 1
+                    output.append(char)
 
             elif char == "}":
-                indent_level -= 1
-                output.append("\n" + " " * (indent_level * 4))
-                in_else = False
-                no_more_spaces = True
+                if dict_scope_level == 0:
+                    indent_level -= 1
+                    output.append("\n" + " " * (indent_level * 4))
+                    no_more_spaces = True
+                else:
+                    dict_scope_level -= 1
+                    output.append(char)
 
             elif char == ";":
                 output.append("\n" + " " * (indent_level * 4))
