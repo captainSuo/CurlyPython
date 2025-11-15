@@ -190,17 +190,31 @@ class CurlyParser:
             if match:
                 modifiers, keyword, name = match.groups()
 
-                # 构建装饰器和处理导入
-                mod_list = modifiers.strip().split()
-                decorators = [f"{indent}@{mod.strip()}" for mod in mod_list]
+                mod_list = [
+                    mod.strip()
+                    for mod in modifiers.strip().split()
+                    if mod.strip() != "async"
+                ]
 
-                # 重构定义行
-                new_def = re.sub(
-                    rf"^\s*.+\s+{keyword}", f"{indent}{keyword}", stripped
-                )
+                if mod_list:
+                    decorators = [f"{indent}@{mod}" for mod in mod_list]
 
-                new_lines.extend(decorators)
-                new_lines.append(new_def)
+                    # 重构定义行，保留async关键字
+                    # 重新构建定义行，保留原有的async（如果有的话）
+                    has_async = "async" in modifiers
+                    async_prefix = "async " if has_async else ""
+
+                    # 使用原始行的内容来保留async
+                    original_def = re.sub(
+                        rf"^\s*.+\s+{keyword}",
+                        f"{indent}{async_prefix}{keyword}",
+                        stripped,
+                    )
+
+                    new_lines.extend(decorators)
+                    new_lines.append(original_def)
+                else:
+                    new_lines.append(line)
             else:
                 new_lines.append(line)
 

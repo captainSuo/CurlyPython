@@ -1,5 +1,6 @@
 import re
 from typing import Self
+from xml.parsers.expat import model
 from .parser import CurlyParser
 
 
@@ -38,26 +39,41 @@ class CurlyParserEnhanced(CurlyParser):
                 modifiers, keyword, name = match.groups()
 
                 # 构建装饰器和处理导入
-                mod_list = modifiers.strip().split()
-                decorators = [
-                    f"{indent}@{self.decorator_alias.get(mod.strip(), mod.strip())}"
-                    for mod in mod_list
+                mod_list = [
+                    mod.strip()
+                    for mod in modifiers.strip().split()
+                    if mod.strip() != "async"
                 ]
 
-                # 处理自动导入（def 和 class 都需要）
-                self.required_imports.update(
-                    mod.strip()
-                    for mod in mod_list
-                    if mod.strip() in self.auto_imports
-                )
+                if mod_list:
+                    decorators = [
+                        f"{indent}@{self.decorator_alias.get(mod, model)}"
+                        for mod in mod_list
+                    ]
 
-                # 重构定义行
-                new_def = re.sub(
-                    rf"^\s*.+\s+{keyword}", f"{indent}{keyword}", stripped
-                )
+                    # 处理自动导入
+                    self.required_imports.update(
+                        mod.strip()
+                        for mod in mod_list
+                        if mod.strip() in self.auto_imports
+                    )
 
-                new_lines.extend(decorators)
-                new_lines.append(new_def)
+                    # 重构定义行，保留async关键字
+                    # 重新构建定义行，保留原有的async（如果有的话）
+                    has_async = "async" in modifiers
+                    async_prefix = "async " if has_async else ""
+
+                    # 使用原始行的内容来保留async
+                    original_def = re.sub(
+                        rf"^\s*.+\s+{keyword}",
+                        f"{indent}{async_prefix}{keyword}",
+                        stripped,
+                    )
+
+                    new_lines.extend(decorators)
+                    new_lines.append(original_def)
+                else:
+                    new_lines.append(line)
             else:
                 new_lines.append(line)
 
