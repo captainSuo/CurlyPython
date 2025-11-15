@@ -90,20 +90,24 @@ curpy my_script.curpy -o my_script.py
 * 注意 ： 自增运算符仅支持后缀形式，不支持前缀形式
 
 ## 扩展功能
-如果在使用时加上`-E`参数，则开启扩展功能
+如果在使用时加上`-E`参数，则开启扩展模式
+
 ```bash
 curpy my_script.curpy -E
 ```
+扩展模式**几乎完全兼容**标准模式的语法，除了少部分命名冲突
 
-### 扩展功能语法
+### 扩展模式语法
 | CurlyPython | Python |
 |-------------|--------|
+| `inx x = 0;`| `x: int = 0`|
 | `static def` | `@staticmethod` |
 | `virtual def` | `@abstractmethod` |
 | `struct class`| `@dataclass` |
 | `MyClass::method()`| `MyClass.method()` |
 
 * 注意 ： 解析器会自动处理导入
+* 注意 ： 尚不支持同时声明多个变量，例如`int x, y;`会被认为是非法的，需要写成`int x; int y;`
 
 #### 示例
 ```javascript
@@ -111,6 +115,12 @@ class MyClass() {
     virtual static def hello() {
         print("Hello, world!");
     }
+}
+
+struct class Student {
+    int age;
+    str name;
+    dict[str, str] grades;
 }
 ```
 
