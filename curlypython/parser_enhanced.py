@@ -8,7 +8,7 @@ class CurlyParserEnhanced(CurlyParser):
     decorator_alias: dict[str, str] = {
         "static": "staticmethod",
         "virtual": "abstractmethod",
-        "struct": "dataclasses",
+        "struct": "dataclass",
     }
 
     auto_imports: dict[str, str] = {
@@ -82,14 +82,13 @@ class CurlyParserEnhanced(CurlyParser):
         self.code = text
         return self
 
-    def extra_imports(self) -> str:
+    def extra_imports(self) -> Self:
         ret: list[str] = []
         for import_str in self.required_imports:
             ret.append(f"{self.auto_imports[import_str]}")
         if ret:
-            return "\n".join(ret) + "\n\n"
-        else:
-            return ""
+            self.code = "\n".join(ret) + "\n\n" + self.code
+        return self
 
     def convert(self, code) -> str:
         self.code = code
@@ -101,6 +100,7 @@ class CurlyParserEnhanced(CurlyParser):
             .replace_basic_syntax()
             .replace_double_colon()
             .parse_decorator()
+            .extra_imports()
             .restore_strings()
             .restore_comments()
         )
