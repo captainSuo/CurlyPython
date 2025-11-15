@@ -91,19 +91,6 @@ class CurlyParserEnhanced(CurlyParser):
         else:
             return ""
 
-    def type_hint_convert(self):
-        """
-        将 [类型] [变量名] 格式替换为 [变量名]: [类型] 格式
-        类型可以包含任意字符（包括空格），变量名必须是合法的Python变量名
-        """
-        pattern = r"^(\s*)(.+?)\s+([a-zA-Z_]\w*)(\s*=.*)?\s*$"
-        replacement = r"\1\3: \2\4"
-
-        lines = self.code.split("\n")
-        converted_lines = [re.sub(pattern, replacement, line) for line in lines]
-        self.code = "\n".join(converted_lines)
-        return self
-
     def convert(self, code) -> str:
         self.code = code
         (
@@ -111,7 +98,6 @@ class CurlyParserEnhanced(CurlyParser):
             .mark_strings()
             .preprocess_code()
             .handle_indent()
-            .type_hint_convert()
             .replace_basic_syntax()
             .replace_double_colon()
             .parse_decorator()
