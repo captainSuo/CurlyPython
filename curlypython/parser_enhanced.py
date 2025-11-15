@@ -1,7 +1,21 @@
 import re
 
 
-class CurlyParser:
+class CurlyParserEnhanced:
+
+    decorator_alias: dict[str, str] = {
+        "static": "staticmethod",
+        "virtual": "abstractmethod",
+        "struct": "dataclasses",
+    }
+
+    auto_imports: dict[str, str] = {
+        "virtual": "from abc import abstractmethod",
+        "struct": "from dataclasses import dataclass",
+    }
+
+    def __init__(self) -> None:
+        self.required_imports: set[str] = set()
 
     def mark_comment_ends(self, code):
         """在每行注释结束位置做标记"""
@@ -60,7 +74,17 @@ class CurlyParser:
 
                 # 构建装饰器和处理导入
                 mod_list = modifiers.strip().split()
-                decorators = [f"{indent}@{mod.strip()}" for mod in mod_list]
+                decorators = [
+                    f"{indent}@{self.decorator_alias.get(mod.strip(), mod.strip())}"
+                    for mod in mod_list
+                ]
+
+                # 处理自动导入（def 和 class 都需要）
+                self.required_imports.update(
+                    mod.strip()
+                    for mod in mod_list
+                    if mod.strip() in self.auto_imports
+                )
 
                 # 重构定义行
                 new_def = re.sub(
@@ -89,7 +113,16 @@ class CurlyParser:
 
         return text
 
-    def convert(self, code):
+    def extra_imports(self) -> str:
+        ret: list[str] = []
+        for import_str in self.required_imports:
+            ret.append(f"{self.auto_imports[import_str]}")
+        if ret:
+            return "\n".join(ret) + "\n\n"
+        else:
+            return ""
+
+    def convert(self, code) -> str:
         # 预处理
         code = self.preprocess_code(code)
 
@@ -183,6 +216,8 @@ class CurlyParser:
 
         code = "".join(output).strip()
         code = self.final_syntax_cleanup(code)
+        code = self.replace_double_colon(code)
         code = self.restore_comment_ends(code)
+        code = self.extra_imports() + code
 
         return code

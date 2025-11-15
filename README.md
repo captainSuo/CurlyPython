@@ -27,7 +27,7 @@ class Calculator {
         return self;
     }
     
-    static def helper() {
+    staticmethod def helper() {
         return "I'm a static method";
     }
 
@@ -39,12 +39,30 @@ class Calculator {
 
 #### 甚至这样
 ```javascript
-def main() {for i in range(5) {if (i % 2 == 0) {print(f"{i} is even");} else {print(f"{i} is odd");}}}class Calculator {def __init__(self, value = 0) {self.value = value or 0}def add(self, x) {self.value += x;return self;}static def helper() {return "I'm a static method";}}
+def main() {for i in range(5) {if (i % 2 == 0) {print(f"{i} is even");} else {print(f"{i} is odd");}}}class Calculator {def __init__(self, value = 0) {self.value = value or 0}def add(self, x) {self.value += x;return self;}staticmethod def helper() {return "I'm a static method";}}
 
 ```
 
-#### 注释相关
-代码解析器会**保留注释**，但是注释内的部分语法也可能被解析！所以注释请尽量写**自然语言**
+## 特色功能
+
+- ✅ 大括号自动转缩进
+- ✅ 分号可选（兼容两种风格）
+- ✅ 静态方法支持
+- ✅ 装饰器支持
+- ✅ 增量赋值支持
+- 🚧 更多语法糖陆续添加...
+
+### 注意
+
+这只是一个趣味项目：
+- 不是真正的编译器
+- 不追求完整语法兼容  
+- 核心是让 Python 支持大括号写法
+
+适合：
+- 喜欢大括号的程序员
+- 想换个风格写 Python
+
 
 
 ## 安装使用
@@ -64,29 +82,49 @@ curpy my_script.curpy -o my_script.py
 | `def foo() { ... }` | `def foo(): ...` |
 | `if (x) { ... }` | `if x: ...` |
 | `class Bar { ... }` | `class Bar: ...` |
-| `static def method() {}` | `@staticmethod` + `def method():` |
 | `decorator class/def` | `@decorator` + `class/def` |
 | `i++` / `i--`| `i += 1` / `i -= 1` |
 | `else if` / `elif`| `elif`|
 
+* 注意 ： 所有`def`和`class`前的内容都会被解析为装饰器，支持多重装饰器
 * 注意 ： 自增运算符仅支持后缀形式，不支持前缀形式
 
-## 特色功能
+## 扩展功能
+如果在使用时加上`-E`参数，则开启扩展功能
+```bash
+curpy my_script.curpy -E
+```
 
-- ✅ 大括号自动转缩进
-- ✅ 分号可选（兼容两种风格）
-- ✅ 静态方法支持
-- ✅ 装饰器支持
-- ✅ 增量赋值支持
-- 🚧 更多语法糖陆续添加...
+### 扩展功能语法
+| CurlyPython | Python |
+|-------------|--------|
+| `static def` | `@staticmethod` |
+| `virtual def` | `@abstractmethod` |
+| `struct class`| `@dataclass` |
+| `MyClass::method()`| `MyClass.method()` |
 
-## 注意
+* 注意 ： 解析器会自动处理导入
 
-这只是一个趣味项目：
-- 不是真正的编译器
-- 不追求完整 JS 语法兼容  
-- 核心是让 Python 支持大括号写法
+#### 示例
+```javascript
+class MyClass() {
+    virtual static def hello() {
+        print("Hello, world!");
+    }
+}
+```
 
-适合：
-- 喜欢大括号的程序员
-- 想换个风格写 Python
+#### 转换后
+```python
+from abc import abstractmethod
+
+class MyClass() :
+    @abstractmethod
+    @staticmethod
+    def hello() :
+        print("Hello, world!")
+```
+
+## 额外注意
+- 目前对字符串内部文本的解析仍然具有问题，所以请尽量不在字符串内部写合法的`CurlyPython`语法
+- 代码解析器会**保留注释**，但是注释内的部分语法也可能被解析！所以注释请尽量避免写合法的`CurlyPython`语法

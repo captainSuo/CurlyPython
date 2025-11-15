@@ -1,6 +1,5 @@
 import argparse
 import sys
-from .parser import CurlyParser
 
 
 def run_curly_code(code):
@@ -11,12 +10,22 @@ def run_curly_code(code):
 
 def main():
     parser = argparse.ArgumentParser(description="CurlyPython - 用大括号写Python")
-    parser.add_argument("input", help="输入文件 (.curpy)")
-    parser.add_argument("-o", "--output", help="输出文件")
-
-    convertor = CurlyParser()
+    parser.add_argument("input", help="input file (.curpy)")
+    parser.add_argument("-o", "--output", help="output file")
+    parser.add_argument(
+        "-E", "--enhanced", help="enable enhanced mode", action="store_true"
+    )
 
     args = parser.parse_args()
+
+    if args.enhanced:
+        from .parser_enhanced import CurlyParserEnhanced
+
+        convertor = CurlyParserEnhanced()
+    else:
+        from .parser import CurlyParser
+
+        convertor = CurlyParser()
 
     # 读取输入文件
     try:
