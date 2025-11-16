@@ -117,6 +117,8 @@ class CurlyParser:
             "except",
             "finally",
             "with",
+            "match",
+            "case",
         }
 
         while i < length:

@@ -21,6 +21,10 @@ class CurlyParserEnhanced(CurlyParser):
         super().__init__()
         self.required_imports: set[str] = set()
 
+    def replace_switch_with_match(self) -> Self:
+        self.code = re.sub(r"\bswitch\b", "match", self.code)
+        return self
+
     def parse_decorator(self) -> Self:
         lines = self.code.split("\n")
         new_lines = []
@@ -112,6 +116,7 @@ class CurlyParserEnhanced(CurlyParser):
             self.mark_comments()
             .mark_strings()
             .preprocess_code()
+            .replace_switch_with_match()
             .handle_indent()
             .replace_basic_syntax()
             .replace_double_colon()
