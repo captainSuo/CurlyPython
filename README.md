@@ -46,7 +46,6 @@ def main() {for i in range(5) {if (i % 2 == 0) {print(f"{i} is even");} else {pr
 ## 特色功能
 
 - ✅ 大括号自动转缩进
-- ✅ 分号可选（兼容两种风格）
 - ✅ 静态方法支持
 - ✅ 装饰器支持
 - ✅ 增量赋值支持
