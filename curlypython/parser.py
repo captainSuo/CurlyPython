@@ -124,7 +124,11 @@ class CurlyParser:
         while i < length:
             char = self.code[i]
 
-            if i > 0 and "".join(output[-7:]).split()[-1] in control_keywords:
+            if (
+                i > 0
+                and char == " "
+                and "".join(output[-7:]).split()[-1] in control_keywords
+            ):
                 expect_indent = True
 
             # 大括号处理
