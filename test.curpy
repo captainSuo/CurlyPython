@@ -1,9 +1,0 @@
-
-lst: list = [1, 2, 3];
-
-def main() {
-    print("hello");
-    for i in lst {
-        print(i);
-    }
-}
